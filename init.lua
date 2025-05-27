@@ -175,7 +175,11 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
-
+vim.keymap.set('n', '<S-Up>', ':resize -2<CR>', { silent = true })
+vim.keymap.set('n', '<S-Down>', ':resize +2<CR>', { silent = true })
+vim.keymap.set('n', '<S-Left>', ':vertical resize -2<CR>', { silent = true })
+vim.keymap.set('n', '<S-Right>', ':vertical resize +2<CR>', { silent = true })
+vim.keymap.set('i', 'jk', '<ESC>', { noremap = false })
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
 -- is not what someone will guess without a bit more experience.
@@ -248,7 +252,23 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
+  'christoomey/vim-tmux-navigator',
+  {
+    'tpope/vim-fugitive',
+    config = function()
+      local map = vim.keymap.set
+      local opts = { nowrap = true, silent = true }
 
+      map('n', '<leader>gs', ':Git<CR>', { desc = 'Git status', unpack(opts) })
+      map('n', '<leader>gc', ':Git commit<CR>', { desc = 'Git commit', unpack(opts) })
+      map('n', '<leader>gp', ':Git push', { desc = 'Git push', unpack(opts) })
+      map('n', '<leader>gP', ':Git pull', { desc = 'Git pull', unpack(opts) })
+      map('n', '<leader>gd', ':Gvdiffsplit!<CR>', { desc = 'Git diff', unpack(opts) })
+      map('n', '<leader>gB', ':Git blame<CR>', { desc = 'Git blame', unpack(opts) })
+    end,
+  },
+  { 'sindrets/diffview.nvim', dependencies = { 'nvim-lua/plenary.nvim' } },
+  { 'akinsho/git-conflict.nvim', version = '*', config = true },
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
   -- keys can be used to configure plugin behavior/loading/etc.
@@ -282,8 +302,107 @@ require('lazy').setup({
         changedelete = { text = '~' },
       },
     },
+    config = function(_, opts)
+      require('gitsigns').setup(opts)
+    end,
   },
+  {
+    'akinsho/toggleterm.nvim',
+    config = function()
+      require('toggleterm').setup {
+        direction = 'float',
+        open_mapping = [[<C-\>]],
+        shade_terminal = true,
+        start_in_insert = true,
+      }
 
+      vim.keymap.set('n', '<leader>th', ':ToggleTerm direction=horizontal<CR>', { desc = 'Toggle terminal (horizontal)' })
+      vim.keymap.set('n', '<leader>tf', ':ToggleTerm direction=float<CR>', { desc = 'Toggle terminald (float)' })
+    end,
+  },
+  {
+    'akinsho/bufferline.nvim',
+    version = '*',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      require('bufferline').setup()
+      vim.keymap.set('n', '<Tab>', ':BufferLineCycleNext<CR>', { desc = 'Next buffer' })
+      vim.keymap.set('n', '<S-Tab>', ':BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+      vim.keymap.set('n', '<leader>bd', ':bdelete<CR>', { desc = 'Close buffer' })
+    end,
+  },
+  {
+    'elixir-tools/elixir-tools.nvim',
+    version = '*',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      local elixir = require 'elixir'
+      local elixirls = require 'elixir.elixirls'
+
+      elixir.setup {
+        nextls = { enable = true },
+        elixirls = {
+          enable = true,
+          settings = elixirls.settings {
+            dialyzerEnabled = false,
+            enableTestLenses = false,
+          },
+          on_attach = function(client, bufnr)
+            vim.keymap.set('n', '<space>fp', ':ElixirFromPipe<cr>', { buffer = true, noremap = true })
+            vim.keymap.set('n', '<space>tp', ':ElixirToPipe<cr>', { buffer = true, noremap = true })
+            vim.keymap.set('v', '<space>em', ':ElixirExpandMacro<cr>', { buffer = true, noremap = true })
+          end,
+        },
+        projectionist = {
+          enable = true,
+        },
+      }
+    end,
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+  },
+  {
+    'nvim-neo-tree/neo-tree.nvim',
+    branch = 'v3.x',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons', -- not strictly required, but recommended
+      'MunifTanjim/nui.nvim',
+      -- {"3rd/image.nvim", opts = {}}, -- Optional image support in preview window: See `# Preview Mode` for more information
+    },
+    cmd = 'NeoTree',
+    keys = {
+      { '\\', ':Neotree reveal<CR>', desc = 'NeoTree reveal', silent = true },
+    },
+    lazy = false, -- neo-tree will lazily load itself
+    ---@module "neo-tree"
+    opts = {
+      filesystem = {
+        window = {
+          width = 35,
+          auto_resize = true,
+          mappings = {
+            ['\\'] = 'close_window',
+          },
+        },
+        event_handlers = {
+          {
+            event = 'neo_tree_buffer_enter',
+            handler = function(args)
+              vim.api.nvim_win_set_option(args.winid, 'winfixwidth', true)
+            end,
+          },
+        },
+        filtered_items = {
+          visible = true,
+          hide_dotfiles = false,
+          hide_gitignored = false,
+        },
+      },
+      -- fill any relevant options here
+    },
+  },
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
   -- This is often very useful to both group configuration, as well as handle
@@ -413,6 +532,25 @@ require('lazy').setup({
         --   },
         -- },
         -- pickers = {}
+        defaults = {
+          vimgrep_arguments = {
+            'rg',
+            '--color=never',
+            '--with-filename',
+            '--line-number',
+            '--column',
+            '--smart-case',
+            '--hidden',
+            '--glob',
+            '!.git/',
+          },
+          file_ignore_patterns = { '%.git/', 'node_modules/' },
+        },
+        pickers = {
+          find_files = {
+            hidden = true,
+          },
+        },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -974,11 +1112,11 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
