@@ -214,7 +214,12 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
-
+vim.api.nvim_create_autocmd('BufWritePre', {
+  pattern = { '*.ex', '*.heex', '*.exs' },
+  callback = function()
+    vim.lsp.buf.format()
+  end,
+})
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
 --  See `:help vim.hl.on_yank()`
@@ -334,37 +339,37 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>bd', ':bdelete<CR>', { desc = 'Close buffer' })
     end,
   },
-  {
-    'elixir-tools/elixir-tools.nvim',
-    version = '*',
-    event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      local elixir = require 'elixir'
-      local elixirls = require 'elixir.elixirls'
-
-      elixir.setup {
-        nextls = { enable = true },
-        elixirls = {
-          enable = true,
-          settings = elixirls.settings {
-            dialyzerEnabled = false,
-            enableTestLenses = false,
-          },
-          on_attach = function(client, bufnr)
-            vim.keymap.set('n', '<space>fp', ':ElixirFromPipe<cr>', { buffer = true, noremap = true })
-            vim.keymap.set('n', '<space>tp', ':ElixirToPipe<cr>', { buffer = true, noremap = true })
-            vim.keymap.set('v', '<space>em', ':ElixirExpandMacro<cr>', { buffer = true, noremap = true })
-          end,
-        },
-        projectionist = {
-          enable = true,
-        },
-      }
-    end,
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-    },
-  },
+  -- {
+  --   'elixir-tools/elixir-tools.nvim',
+  --   version = '*',
+  --   event = { 'BufReadPre', 'BufNewFile' },
+  --   config = function()
+  --     local elixir = require 'elixir'
+  --     local elixirls = require 'elixir.elixirls'
+  --
+  --     elixir.setup {
+  --       nextls = { enable = true },
+  --       elixirls = {
+  --         enable = true,
+  --         settings = elixirls.settings {
+  --           dialyzerEnabled = false,
+  --           enableTestLenses = false,
+  --         },
+  --         on_attach = function(client, bufnr)
+  --           vim.keymap.set('n', '<space>fp', ':ElixirFromPipe<cr>', { buffer = true, noremap = true })
+  --           vim.keymap.set('n', '<space>tp', ':ElixirToPipe<cr>', { buffer = true, noremap = true })
+  --           vim.keymap.set('v', '<space>em', ':ElixirExpandMacro<cr>', { buffer = true, noremap = true })
+  --         end,
+  --       },
+  --       projectionist = {
+  --         enable = true,
+  --       },
+  --     }
+  --   end,
+  --   dependencies = {
+  --     'nvim-lua/plenary.nvim',
+  --   },
+  -- },
   {
     'nvim-neo-tree/neo-tree.nvim',
     branch = 'v3.x',
@@ -812,6 +817,15 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
+        elixirls = {
+          cmd = { '/Users/robertgiles/elixir-ls/release/language_server.sh' },
+          settings = {
+            elixirLS = {
+              dialyzerEnabled = false,
+              fetchDeps = false,
+            },
+          },
+        },
         -- clangd = {},
         -- gopls = {},
         -- pyright = {},
@@ -1093,7 +1107,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'elixir', 'heex', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'tmux', 'vim', 'vimdoc' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
