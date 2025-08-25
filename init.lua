@@ -808,7 +808,7 @@ require('lazy').setup({
           },
         },
         -- ➕ add this: VOLAR (Vue) — take over TS/JS inside Vue projects
-        volar = {
+        vue_ls = {
           -- Use blink.cmp capabilities you already computed below
           -- (they get merged in the mason-lspconfig handler)
           filetypes = { 'vue', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
@@ -837,7 +837,7 @@ require('lazy').setup({
             vim.keymap.set('n', '<leader>ef', '<cmd>EslintFixAll<CR>', { buffer = bufnr, desc = 'ESLint Fix All' })
           end,
         },
-        tsserver = {
+        ts_ls = {
           on_new_config = function(config, root_dir)
             local pkg = root_dir .. '/package.json'
             if vim.fn.filereadable(pkg) == 1 then
