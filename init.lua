@@ -20,27 +20,6 @@
 =====================================================================
 =====================================================================
 
-What is Kickstart?
-
-  Kickstart.nvim is *not* a distribution.
-
-  Kickstart.nvim is a starting point for your own configuration.
-    The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
-
-    Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving Kickstart just the way it is for a while
-    or immediately breaking it into modular pieces. It's up to you!
-
-    If you don't know anything about Lua, I recommend taking some time to read through
-    a guide. One possible example which will only take 10-15 minutes:
-      - https://learnxinyminutes.com/docs/lua/
-
-    After understanding a bit more about Lua, you can use `:help lua-guide` as a
-    reference for how Neovim integrates Lua.
-    - :help lua-guide
-    - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
 Kickstart Guide:
 
   TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
@@ -807,6 +786,7 @@ require('lazy').setup({
       --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      local base_on_attach = vim.lsp.config.eslint.on_attach
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -819,11 +799,57 @@ require('lazy').setup({
       local servers = {
         elixirls = {
           cmd = { '/Users/robertgiles/elixir-ls/release/language_server.sh' },
+          filetypes = { 'elixir', 'eelixir', 'heex', 'surface' },
           settings = {
             elixirLS = {
               dialyzerEnabled = false,
               fetchDeps = false,
             },
+          },
+        },
+        -- ➕ add this: VOLAR (Vue) — take over TS/JS inside Vue projects
+        volar = {
+          -- Use blink.cmp capabilities you already computed below
+          -- (they get merged in the mason-lspconfig handler)
+          filetypes = { 'vue', 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
+          init_options = {
+            vue = { hybridMode = false }, -- default is fine
+          },
+        },
+
+        -- ➕ add this: ESLint LSP for diagnostics & code actions
+        eslint = {
+          settings = {
+            -- prefer project-local eslint
+            workingDirectory = { mode = 'auto' },
+            format = false, -- keep formatting to your formatter (e.g., conform/prettier)
+          },
+          on_attach = function(client, bufnr)
+            if not base_on_attach then
+              return
+            end
+            -- optional: one-key “Fix all”
+            base_on_attach(client, bufnr)
+            vim.api.nvim_create_autocmd('BufWritePre', {
+              buffer = bufnr,
+              command = 'LspEslintFixAll',
+            })
+            vim.keymap.set('n', '<leader>ef', '<cmd>EslintFixAll<CR>', { buffer = bufnr, desc = 'ESLint Fix All' })
+          end,
+        },
+        tsserver = {
+          on_new_config = function(config, root_dir)
+            local pkg = root_dir .. '/package.json'
+            if vim.fn.filereadable(pkg) == 1 then
+              local content = table.concat(vim.fn.readfile(pkg), '\n')
+              if string.find(content, '"vue"%s*:') then
+                config.enabled = false -- don’t run tsserver in Vue repos (Volar handles it)
+              end
+            end
+          end,
+          -- disable tsserver formatting (use Prettier via conform.nvim instead)
+          init_options = {
+            preferences = { providePrefixAndSuffixTextForRename = true },
           },
         },
         -- clangd = {},
@@ -854,7 +880,7 @@ require('lazy').setup({
           },
         },
       }
-
+      require('lspconfig').elixirls.setup(servers.elixirls)
       -- Ensure the servers and tools above are installed
       --
       -- To check the current status of installed tools and/or manually install
@@ -927,7 +953,14 @@ require('lazy').setup({
         -- python = { "isort", "black" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        javascriptreact = { 'prettierd', 'prettier' },
+        typescript = { 'prettierd', 'prettier' },
+        typescriptreact = { 'prettierd', 'prettier' },
+        vue = { 'prettierd', 'prettier' },
+        json = { 'prettierd', 'prettier' },
+        yaml = { 'prettierd', 'prettier' },
+        markdown = { 'prettierd', 'prettier' },
       },
     },
   },
@@ -1107,7 +1140,24 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'elixir', 'heex', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'tmux', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'elixir',
+        'heex',
+        'html',
+        'javascript',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'tmux',
+        'vim',
+        'vue',
+        'vimdoc',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
